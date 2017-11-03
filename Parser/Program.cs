@@ -25,6 +25,12 @@ namespace Parser
             throw new Exception();
         }
 
+        public static void TestGit()
+        {
+
+        }
+
+        
 
         static void Main(string[] args)
         {
