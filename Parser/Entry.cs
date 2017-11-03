@@ -1,22 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Parser
 {
-    class Entry
+    public class Entry
     {
-        static public uint Id { set; get; } = 0;
-        public DateTime DateTime { set; get; }
+        public DateTime Date { set; get; }
         public string Message { set; get; }
-        public string SenderName { set; get; }
         public string Type { set; get; }
-        public uint SenderID { set; get; } = 0;
-        public uint RecipientID { set; get; } = 0;
-        
+        public string SenderName { set; get; }
+        public string ElementType { set; get; }
+        public uint SenderId { set; get; }
+        public uint RecipientId { set; get; }
+        public string Path { set; get; }
+        public string Offset { set; get; }
+        public string Length { set; get; }
     }
 }
-
-

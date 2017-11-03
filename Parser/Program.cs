@@ -19,132 +19,129 @@ namespace Parser
             {
                 return (path + @"\" + fileName);
             }
-            else
-            {
-                Console.WriteLine("В директории {0} нет такого файла!", path);
-                Console.WriteLine();
-                GetFile();
-            }
-            return "";
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("В директории {0} нет такого файла!", path);
+            Console.ReadKey();
+            throw new Exception();
         }
-
 
 
         static void Main(string[] args)
         {
-
-            //DataTable ReadCSVFile(string pathToCsvFile)
-            //{
-            //создаём таблицу
-            DataTable dt = new DataTable("Lines");
-            //создаём колонки
-            DataColumn colData;
-            colData = new DataColumn("Date", typeof(DateTime));
-            DataColumn colMessage;
-            colMessage = new DataColumn("Message", typeof(string));
-            DataColumn colType;
-            colType = new DataColumn("Type", typeof(string));
-            DataColumn colSenderName;
-            colSenderName = new DataColumn("SenderName", typeof(string));
-            DataColumn colElementType;
-            colElementType = new DataColumn("ElementType", typeof(string));
-            DataColumn colSenderId;
-            colSenderId = new DataColumn("SenderId", typeof(uint));
-            DataColumn colRecipientId;
-            colRecipientId = new DataColumn("RecipientId", typeof(uint));
-            DataColumn colPath;
-            colPath = new DataColumn("Path", typeof(string));
-            DataColumn colOffset;
-            colOffset = new DataColumn("Offset", typeof(string));
-            DataColumn colLength;
-            colLength = new DataColumn("Length", typeof(string));
-            //добавляем колонки в таблицу
-            dt.Columns.AddRange(new DataColumn[] { colData, colMessage, colType, colSenderName, colElementType, colSenderId, colRecipientId, colPath, colOffset, colLength });
             try
             {
-                DataRow dr = null;
-                string[] lineValues = null;
-                string[] lines = File.ReadAllLines(GetFile());
-                for (int i = 0; i < lines.Length; i++)
+                List<Entry> list = new List<Entry>();
+                IEnumerable<string> lines;
+                IEnumerable<string> lineValues;
+                lines = File.ReadLines(GetFile());
+                double numOfLines = lines.Count();
+                double n = 0;
+                foreach (var item in lines)
                 {
                     try
                     {
-                        if (!String.IsNullOrEmpty(lines[i]))
+                        if (!String.IsNullOrEmpty(item))
                         {
-                            lineValues = lines[i].Split(';');
-                            //создаём новую строку
-                            dr = dt.NewRow();
-
-                            dr["Date"] = DateTime.Parse(lineValues[0]);
-                            dr["Message"] = lineValues[1];
-                            dr["Type"] = lineValues[2];
-                            dr["SenderName"] = lineValues[3];
-                            dr["ElementType"] = lineValues[4];
-                            dr["SenderId"] = uint.Parse(lineValues[5]);
-                            dr["RecipientId"] = uint.Parse(lineValues[6]);
-                            dr["Path"] = lineValues[7];
-                            dr["Offset"] = lineValues[8];
-                            dr["Length"] = lineValues[9];
-
-                            //добавляем строку в таблицу
-                            dt.Rows.Add(dr);
+                            lineValues = item.Split('\t');
+                            string[] myValues = lineValues.ToArray();
+                            list.Add(new Entry()
+                            {
+                                Date = DateTime.Parse(myValues[0]),
+                                Message = myValues[1],
+                                Type = myValues[2],
+                                SenderName = myValues[3],
+                                ElementType = myValues[4],
+                                SenderId = uint.Parse(myValues[5]),
+                                RecipientId = uint.Parse(myValues[6]),
+                                //Path = myValues[7],
+                                //Offset = myValues[8],
+                                //Length = myValues[9]
+                            });
                         }
                     }
                     catch (FormatException fe)
                     {
-                        Console.WriteLine(i + " " + fe.Message);
-                        //i++;
+                        //Console.WriteLine(n + " " + fe.Message);
+                    }
+                    catch (IndexOutOfRangeException ex)
+                    {
+                        //Console.WriteLine(n + " " + ex.Message);
+                    }
+                    n++;
+                    Console.WriteLine("Загружено {0:f}%", (n * 100 / numOfLines));
+                }
+
+                uint idSender = list.Find(a => a.Type == "outgoing_privateMessage").SenderId;
+                List<uint> ChatID = new List<uint>();
+                foreach (var item in list)
+                {
+                    double x = 0;
+                    for (int i = 0; i < ChatID.Count; i++)
+                    {
+                        if (item.SenderId == ChatID.ElementAt(i))
+                        {
+                            x++;
+                        }
+                    }
+                    if (x == 0 && item.SenderId != idSender)
+                    {
+                        ChatID.Add(item.SenderId);
                     }
                 }
+
+                List<Entry> noDupList = new List<Entry>();
+                noDupList.Add(list.ElementAt(0));
+                foreach (var item in list)
+                {
+                    int temp = 0;
+                    foreach (var itemNoDup in noDupList)
+                    {
+                        if (item.Date == itemNoDup.Date && item.Message == itemNoDup.Message && item.SenderName == itemNoDup.SenderName)
+                        {
+                            temp++;
+                        }
+                    }
+                    if (temp == 0)
+                    {
+                        noDupList.Add(item);
+                    }
+                }
+                Console.Clear();
+                Directory.CreateDirectory(Directory.GetCurrentDirectory() + @"\" + list.Find(a => a.Type == "outgoing_privateMessage").SenderName);
+
+                var orderedList = noDupList.OrderBy(l => l.Date);
+                foreach (var id in ChatID)
+                {
+                    string fileName = list.Find(a => a.SenderId == id).SenderName + ".txt";
+                    string path = (Directory.GetCurrentDirectory() + @"\" + list.Find(a => a.Type == "outgoing_privateMessage").SenderName);
+                    Console.WriteLine("Записываю файл {0}", fileName);
+                    FileStream fs = new FileStream((path + @"\" + fileName), FileMode.OpenOrCreate, FileAccess.Write);
+                    StreamWriter sw = new StreamWriter(fs);
+
+                    foreach (var item in orderedList)
+                    {
+                        if (id == item.SenderId || id == item.RecipientId)
+                        {
+                            if (item.SenderName == "")
+                            {
+                                sw.WriteLine(item.Date.ToString() + '\t' + item.Type);
+                            }
+                            else
+                            {
+                                sw.WriteLine(item.Date.ToString() + '\t' + item.SenderName + '\t' + item.Message);
+                            }
+                        }
+                    }
+                    sw.Close();
+                }
+                Console.WriteLine("Готово!!!");
+                Console.ReadKey();
+
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
-
-
-
-
-
-            // Presuming the DataTable has a column named Date.
-            string expression;
-            expression = "Date > #1/1/00#";
-            DataRow[] foundRows;
-
-            // Use the Select method to find all rows matching the filter.
-            foundRows = dt.Select(expression);
-
-            // Print column 0 of each returned row.
-            for (int i = 0; i < foundRows.Length; i++)
-            {
-                Console.Write(foundRows[i][0]);
-                Console.Write("            ");
-                Console.Write(foundRows[i][1]);
-                Console.Write("            ");
-                Console.Write(foundRows[i][2]);
-                Console.Write("            ");
-                Console.WriteLine(foundRows[i][3]);
-            }
-
-
-            //          // Presuming the DataTable has a column named Date.
-            //string expression = "Date = '1/31/1979' or OrderID = 2";
-            //// string expression = "OrderQuantity = 2 and OrderID = 2";
-
-            //// Sort descending by column named CompanyName.
-            //string sortOrder = "CompanyName ASC";
-            //DataRow[] foundRows;
-
-            //// Use the Select method to find all rows matching the filter.
-            //foundRows = table.Select(expression, sortOrder);
-
-            //// Print column 0 of each returned row.
-            //for (int i = 0; i < foundRows.Length; i++)
-            //    Console.WriteLine(foundRows[i][2]);
-            ////    return dt;
-            ////}
-            Console.WriteLine("Allright!!!");
-            Console.ReadKey();
         }
     }
 }
