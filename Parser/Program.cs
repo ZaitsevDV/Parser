@@ -25,13 +25,6 @@ namespace Parser
             throw new Exception();
         }
 
-        public static void TestGit()
-        {
-
-        }
-
-        
-
         static void Main(string[] args)
         {
             try
@@ -59,9 +52,6 @@ namespace Parser
                                 ElementType = myValues[4],
                                 SenderId = uint.Parse(myValues[5]),
                                 RecipientId = uint.Parse(myValues[6]),
-                                //Path = myValues[7],
-                                //Offset = myValues[8],
-                                //Length = myValues[9]
                             });
                         }
                     }
@@ -76,8 +66,11 @@ namespace Parser
                     n++;
                     Console.WriteLine("Загружено {0:f}%", (n * 100 / numOfLines));
                 }
-
+                //Находим чья переписка парсится
                 uint idSender = list.Find(a => a.Type == "outgoing_privateMessage").SenderId;
+
+                //Ищем уникальных пользователей
+
                 List<uint> ChatID = new List<uint>();
                 foreach (var item in list)
                 {
@@ -92,11 +85,13 @@ namespace Parser
                     if (x == 0 && item.SenderId != idSender)
                     {
                         ChatID.Add(item.SenderId);
+                        Console.WriteLine(item.SenderName);
                     }
                 }
-
+                //Удаление дубликатов строк
                 List<Entry> noDupList = new List<Entry>();
                 noDupList.Add(list.ElementAt(0));
+                double count = list.Capacity;
                 foreach (var item in list)
                 {
                     int temp = 0;
@@ -111,18 +106,25 @@ namespace Parser
                     {
                         noDupList.Add(item);
                     }
+                    Console.WriteLine(count--);
                 }
+
                 Console.Clear();
                 Directory.CreateDirectory(Directory.GetCurrentDirectory() + @"\" + list.Find(a => a.Type == "outgoing_privateMessage").SenderName);
 
                 var orderedList = noDupList.OrderBy(l => l.Date);
+                string path = (Directory.GetCurrentDirectory() + @"\" + list.Find(a => a.Type == "outgoing_privateMessage").SenderName);
+                string Sender = "No name";
                 foreach (var id in ChatID)
                 {
-                    string fileName = list.Find(a => a.SenderId == id).SenderName + ".txt";
-                    string path = (Directory.GetCurrentDirectory() + @"\" + list.Find(a => a.Type == "outgoing_privateMessage").SenderName);
+                    Sender = list.Find(a => a.SenderId == id).SenderName;
+                    string fileName = id + ".txt";
                     Console.WriteLine("Записываю файл {0}", fileName);
                     FileStream fs = new FileStream((path + @"\" + fileName), FileMode.OpenOrCreate, FileAccess.Write);
                     StreamWriter sw = new StreamWriter(fs);
+
+                    sw.WriteLine(Sender);
+                    sw.WriteLine();
 
                     foreach (var item in orderedList)
                     {
@@ -141,13 +143,12 @@ namespace Parser
                     sw.Close();
                 }
                 Console.WriteLine("Готово!!!");
-                Console.ReadKey();
-
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
+            Console.ReadKey();
         }
     }
 }
